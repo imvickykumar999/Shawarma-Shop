@@ -1,0 +1,74 @@
+What is the primary objective during the night shift in Scary Shawarma Kiosk: The Anomaly?,Assemble shawarma for humans while identifying and rejecting anomalous monsters.
+Between what hours does the night shift take place?,10:00 PM to 7:00 AM.
+What is the very first procedural step an employee should take upon starting their shift?,Turn on the grill.
+What is the correct sequence of ingredients for a standard shawarma assembly?,"Lavash bread, sauce, cheese, salad, and meat."
+Which base item must be placed on the board first before any other ingredients?,Lavash bread.
+What item should be given to a customer who enters the shop smiling?,A soda.
+What is the required protocol for the 'moving bundle' provided by a smiling customer?,It must be kept sealed under the counter.
+On what specific day and time does the driverless inspection car arrive?,Every Friday around 2:00 AM.
+What action must the employee take immediately when the inspection car arrives on Friday?,Exit through the back door immediately.
+"During the Friday 2:00 AM inspection, what is the employee strictly forbidden from looking at?",The shawarma stand (kiosk).
+What two actions must be taken if the meat on the skewer begins to pulse and moan?,Turn off the grill and leave the shop immediately.
+What is the rule regarding the 'voices in the meat' during a pulsing meat event?,Do not listen to them.
+How should an employee interact with a 'Faceless Man' who comes to order?,Serve him his order but never look directly at his face/eyes.
+What is the consequence of closing the window on a normal human customer?,It is recorded as a mistake that summons the Inspector.
+What happens if an employee serves an 'anomalous' customer instead of rejecting them?,It is recorded as a mistake that summons the Inspector.
+What is the ultimate penalty for making too many mistakes during a shift?,The Inspector will 'fix' (kill or arrest) the employee.
+What must be checked for every customer before serving them food?,The CCTV cameras.
+What specific anomaly type is detected when Camera 1 shows two people but only one is at the counter?,A Body Double.
+"What is the 'Passenger' anomaly, as seen on CCTV Camera 1?",A small creature attached to the customer's back.
+Which CCTV camera view is used to check for 'Black Holes' or a second face on a customer's back?,Camera 2 (Back View).
+How do 'Ghost' anomalies react when the camera is toggled to Night Vision?,They disappear completely from the screen.
+What unusual movement seen only in Night Vision identifies the 'Dancer' anomaly?,The customer begins doing a weird dance that is invisible in normal light.
+What are the common visual red flags for an anomaly's eyes?,"Pure white eyes, no pupils, or eyes rolling around."
+What skin-related textures often indicate that a customer is an anomaly?,"Glitchy textures, gray/pale skin, or unnatural cuts."
+What physical limb anomalies should an employee look for?,Short arms or jutting bones that look disconnected.
+What auditory red flag involves a mismatch between a character's model and their speech?,"A gender-swapped voice (e.g., a male character with a female voice)."
+How is an anomaly identified through dialogue if they claim to be a regular?,They claim they have been there before or act as a 'Doppelganger'.
+Is the 'Karate Man' practicing moves in front of the kiosk an anomaly or a safe customer?,A safe customer (Normal).
+Should an employee serve the 'Drunk Guy' who has no money?,"Yes, he is a safe human customer."
+Under what condition is the 'Dancing Lady' considered a safe human customer?,If she is dancing in person in front of the counter (not just on the camera).
+What must be served to the 'Smiling Man' to avoid a bad ending?,A soda must be provided before his shawarma.
+What SQL table in the detective guide stores the counter observations seen by the employee's eyes?,The `customers` table.
+"In SQL anomaly hunting, what does a `has_pulse` value of `0` in the `biometrics` table indicate?",The customer is an anomaly (No heartbeat).
+Which SQL query condition identifies a Body Double using the `cctv_logs` table?,`cam_1_visual = 'Two People'`.
+Which SQL query condition identifies a Physical Mutation using the `cctv_logs` table?,`cam_2_visual = 'Black Holes'`.
+What does a customer speaking in 'gibberish' or random letters signify?,They are an anomaly.
+What indicates a 'Voice Mismatch' anomaly in a SQL diagnostic report?,A `reported_gender` of 'Female' combined with a 'Deep' `voice_pitch`.
+What is the purpose of the back door in the kiosk?,It is the emergency exit used during the Friday inspection or meat pulsing events.
+What is the significance of a customer with no pupils or pure white eyes?,They are a confirmed anomaly.
+"In the context of the game's mechanics, what is an 'Anomaly'?",A monster disguised as a human customer.
+Which specific safe character practices martial arts moves at the counter?,The Karate Man.
+What is the visual red flag associated with the 'Santa Claus' character?,He has a bag that appears to contain a kidnapped child.
+"If a customer is visible at the counter but 'Disappears' on Night Vision, what are they?",A 'Ghost' anomaly.
+Why is it important to check the back view (Camera 2) of a customer?,To detect second faces or Physical Mutations like black holes.
+What defines a 'Perfect Run' in Scary Shawarma Kiosk?,Completing the shift with zero mistakes in serving or rejecting customers.
+What should you do if an anomaly refuses to leave after the window is closed?,Wait for them to depart; do not reopen the window.
+What indicates a 'Class-S Anomaly' based on SQL detective data?,"No pulse, night vision failure, and black holes on the back."
+How does the game logic penalize pattern matching or rote memorization of human faces?,By using Body Doubles that look human but reveal a second person on CCTV.
+What is the significance of 'Trypophobia-style holes' on a character's model?,It is a physical red flag for a mutation anomaly.
+When should the shutter/window be closed immediately?,Upon detecting an unusual or unknown anomaly.
+What is the role of the 'Inspector' in the game's mistake system?,He serves as the primary threat who appears or 'fixes' you after repeated errors.
+What does it mean if a customer 'He Never Left' according to in-game text?,An anomaly is still present and potentially dangerous.
+What is the primary equipment used for 'Night Vision' checks?,The CCTV monitor system.
+How do anomalies typically speak if they are failing the 'human' disguise?,"In gibberish, nonsense, or with a mismatched voice pitch."
+What specific character might have a face behind their head (Second Face)?,A Physical Mutation anomaly detectable on Camera 2.
+What is the 'Dancer' anomaly's unique characteristic?,It is only visible dancing through the Night Vision camera mode.
+Is it a mistake to serve a customer with gray/pale skin?,"No, if they pass all CCTV and biometric checks; however, it is a major red flag."
+What happens if you look at the shawarma stand during the 2:00 AM Friday inspection?,"The inspection fails, often leading to an immediate game over or arrest."
+Which ingredient is added to the lavash bread immediately after the sauce?,Cheese.
+Which ingredient is added to the lavash bread immediately after the cheese?,Salad.
+What is the final ingredient added before rolling the shawarma?,Meat.
+What is the required reaction to a 'Faceless Man' regarding his eyes?,Never look directly at them.
+What does a 'Body Double' look like in Camera 1?,Two people appear on the screen where only one should be.
+What 'Safe Weirdo' character is known for practicing martial arts moves?,The Karate Man.
+Why might a customer be considered 'Dead Inside' in the biometrics log?,Because they have no pulse (`has_pulse = 0`).
+How should an employee handle the 'Old Man' who mutters gibberish?,Treat him as an anomaly and do not serve him.
+What does the SQL command `WHERE night_vision_status != 'Visible'` filter for?,It identifies anomalies that fail the Night Vision check (like Ghosts).
+"If a female customer has a 'Deep' voice pitch, what type of anomaly is likely being detected?",A Voice Mismatch anomaly.
+What is the function of the `biometrics` table in the Shawarma Detective guide?,It stores non-visual biological data like voice pitch and pulse.
+What is the first thing a player sees at the start of the game Scary Shawarma Kiosk?,The shop across the street and the need to cross without getting hit by cars.
+How many possible endings are there in the Scary Shawarma Kiosk: The Anomaly?,Five.
+What does the 'Inspector' do during his 2:00 AM Friday visit?,He conducts an inspection of the shop for 'non-compliance'.
+What is the indicator that a customer is human despite having 'no money'?,They are identified as the 'Drunk Guy' safe character.
+Where should the employee stand during the Friday 2:00 AM inspection?,"Outside, away from the shop, after exiting through the back door."

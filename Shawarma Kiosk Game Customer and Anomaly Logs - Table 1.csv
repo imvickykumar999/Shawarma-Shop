@@ -1,0 +1,10 @@
+customer_id,name,reported_gender,eye_color,appearance_notes,cam_1_visual,cam_2_visual,night_vision_status,anomaly_type,Source
+2,Smiling Man,Male,Black,"Wide grin, staring intensely; gives a moving bundle",Two People,Normal Back,Visible,Body Double,1-3
+3,Business Lady,Female,Blue,"Looking at watch, seems impatient; has no pulse",Humanoid,Black Holes,Disappears,Night Vision Failure,"2, 3"
+Not in source,Faceless Man,Male,None,Has no face or eyes; rule is to serve him without looking at the face,Not in source,Not in source,Not in source,Physical Mutation,4-6
+Not in source,Santa Claus,Male,Not in source,Eyes look abnormal; carrying a bag that appears to contain a kidnapped person,Not in source,Not in source,Not in source,Physical Mutation,"4, 6"
+Not in source,The Dancer,Not in source,Not in source,Does a weird dance only visible in the dark,Not in source,Not in source,Visible (only for dance),Night Vision Failure,1
+Not in source,Doppelganger,Not in source,Not in source,Claims to have been at the shop before; appearance matches previous customers,Not in source,Not in source,Not in source,Body Double,1
+1,Karate Man,Male,Brown,"Practicing moves, looks normal, wearing a gi",Humanoid,Normal Back,Visible,Human,1-3
+4,Old Man,Male,Gray,Muttering gibberish or nonsense,Humanoid,Normal Back,Visible,Human,"1, 2"
+Not in source,Michael Myers,Male,Not in source,Wearing a mask and holding a knife; breathing heavily,Not in source,Not in source,Not in source,Human,5

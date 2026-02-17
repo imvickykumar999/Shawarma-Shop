@@ -1,0 +1,418 @@
+<p><em>Technical Guide for Kiosk Operators (and Sleep‑Deprived Developers)</em></p>
+
+<p>In the <strong>Scary Shawarma Kiosk</strong>, your eyes can deceive you. Cameras glitch, shadows move, and some customers seem&hellip; statistically improbable. To survive the night shift, you must stop thinking like a cook and start thinking like a <strong>Database Administrator</strong>.</p>
+
+<p>As Django developers know: a clean, structured database is the difference between stable deployment and complete system failure. In this kiosk, that &ldquo;system failure&rdquo; just happens to be <strong>Status Erasure</strong>.</p>
+
+<p>This guide walks through a full SQL workflow that turns chaotic observations into structured anomaly detection &mdash; using joins, case logic, and a single diagnostic query.</p>
+
+<hr />
+<h2>🧱 1. Initializing the Security Schema</h2>
+
+<p>First, we create a database designed to cross‑reference reality from three perspectives:</p>
+
+<ul>
+	<li>
+	<p><strong>customers</strong> &rarr; what the operator sees</p>
+	</li>
+	<li>
+	<p><strong>cctv_logs</strong> &rarr; what cameras record</p>
+	</li>
+	<li>
+	<p><strong>biometrics</strong> &rarr; hidden physiological truth</p>
+	</li>
+</ul>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin-bottom: 20px;">
+    
+    <div style="padding: 12px 20px; border-bottom: 1px solid #f3f4f6; background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #4b5563;">setup_schema.sql</span>
+        <span style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">MySQL</span>
+    </div>
+
+    <div style="padding: 20px; background-color: #ffffff; overflow-x: auto;">
+        <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; color: #1f2937;"><span style="color: #6b7280; font-style: italic;">-- Step 1: Create the Database</span>
+<span style="color: #2563eb; font-weight: 600;">CREATE DATABASE</span> shawarma_shop;
+<span style="color: #2563eb; font-weight: 600;">USE</span> shawarma_shop;
+
+<span style="color: #6b7280; font-style: italic;">-- Step 2: Create the Tables</span>
+<span style="color: #2563eb; font-weight: 600;">CREATE TABLE</span> customers (
+    customer_id <span style="color: #9333ea;">INTEGER</span> <span style="color: #2563eb; font-weight: 600;">PRIMARY KEY</span>,
+    name <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">50</span>),
+    reported_gender <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">10</span>),
+    appearance_notes <span style="color: #9333ea;">TEXT</span>
+);
+
+<span style="color: #2563eb; font-weight: 600;">CREATE TABLE</span> cctv_logs (
+    log_id <span style="color: #9333ea;">INTEGER</span> <span style="color: #2563eb; font-weight: 600;">PRIMARY KEY</span>,
+    customer_id <span style="color: #9333ea;">INTEGER</span>,
+    cam_1_front <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">50</span>),
+    cam_2_back <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">50</span>),
+    night_vision <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">20</span>),
+    <span style="color: #2563eb; font-weight: 600;">FOREIGN KEY</span> (customer_id) <span style="color: #2563eb; font-weight: 600;">REFERENCES</span> customers(customer_id)
+);
+
+<span style="color: #2563eb; font-weight: 600;">CREATE TABLE</span> biometrics (
+    customer_id <span style="color: #9333ea;">INTEGER</span>,
+    voice_pitch <span style="color: #9333ea;">VARCHAR</span>(<span style="color: #059669;">20</span>),
+    has_pulse <span style="color: #9333ea;">BOOLEAN</span>,
+    <span style="color: #2563eb; font-weight: 600;">FOREIGN KEY</span> (customer_id) <span style="color: #2563eb; font-weight: 600;">REFERENCES</span> customers(customer_id)
+);</pre>
+    </div>
+</div>
+
+<br>
+<h2>🌙 2. Populating the Night Shift Logs</h2>
+
+<p>Around 2:00 AM, patterns begin to break. The following entries illustrate normal vs anomalous behavior.</p>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin-bottom: 20px;">
+    
+    <div style="padding: 12px 20px; border-bottom: 1px solid #f3f4f6; background-color: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #4b5563;">data_insertion.sql</span>
+        <span style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">MySQL</span>
+    </div>
+
+    <div style="padding: 20px; background-color: #ffffff; overflow-x: auto;">
+        <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; color: #1f2937;"><span style="color: #6b7280; font-style: italic;">-- Step 3: Insert the Suspects</span>
+<span style="color: #2563eb; font-weight: 600;">INSERT INTO</span> customers <span style="color: #2563eb; font-weight: 600;">VALUES</span>
+(<span style="color: #059669;">1</span>, <span style="color: #d97706;">'Karate Man'</span>, <span style="color: #d97706;">'Male'</span>, <span style="color: #d97706;">'Practicing moves, looks normal'</span>),
+(<span style="color: #059669;">2</span>, <span style="color: #d97706;">'Smiling Man'</span>, <span style="color: #d97706;">'Male'</span>, <span style="color: #d97706;">'Wide grin, staring intensely'</span>),
+(<span style="color: #059669;">3</span>, <span style="color: #d97706;">'Business Lady'</span>, <span style="color: #d97706;">'Female'</span>, <span style="color: #d97706;">'Looking at watch, seems impatient'</span>),
+(<span style="color: #059669;">4</span>, <span style="color: #d97706;">'The Twin'</span>, <span style="color: #d97706;">'Female'</span>, <span style="color: #d97706;">'Looks like a regular student'</span>);
+
+<span style="color: #6b7280; font-style: italic;">-- Step 4: Record the CCTV Truth</span>
+<span style="color: #2563eb; font-weight: 600;">INSERT INTO</span> cctv_logs <span style="color: #2563eb; font-weight: 600;">VALUES</span>
+(<span style="color: #059669;">101</span>, <span style="color: #059669;">1</span>, <span style="color: #d97706;">'Humanoid'</span>, <span style="color: #d97706;">'Normal Back'</span>, <span style="color: #d97706;">'Visible'</span>),
+(<span style="color: #059669;">102</span>, <span style="color: #059669;">2</span>, <span style="color: #d97706;">'Two People'</span>, <span style="color: #d97706;">'Normal Back'</span>, <span style="color: #d97706;">'Visible'</span>),
+(<span style="color: #059669;">103</span>, <span style="color: #059669;">3</span>, <span style="color: #d97706;">'Humanoid'</span>, <span style="color: #d97706;">'Black Holes'</span>, <span style="color: #d97706;">'Disappears'</span>),
+(<span style="color: #059669;">104</span>, <span style="color: #059669;">4</span>, <span style="color: #d97706;">'Humanoid'</span>, <span style="color: #d97706;">'Normal Back'</span>, <span style="color: #d97706;">'Visible'</span>);
+
+<span style="color: #6b7280; font-style: italic;">-- Step 5: Log the Biometric Reality</span>
+<span style="color: #2563eb; font-weight: 600;">INSERT INTO</span> biometrics <span style="color: #2563eb; font-weight: 600;">VALUES</span>
+(<span style="color: #059669;">1</span>, <span style="color: #d97706;">'Normal'</span>, <span style="color: #059669;">1</span>),
+(<span style="color: #059669;">2</span>, <span style="color: #d97706;">'High-Pitched'</span>, <span style="color: #059669;">1</span>),
+(<span style="color: #059669;">3</span>, <span style="color: #d97706;">'None'</span>, <span style="color: #059669;">0</span>),
+(<span style="color: #059669;">4</span>, <span style="color: #d97706;">'Ultra-Deep Bass'</span>, <span style="color: #059669;">1</span>);</pre>
+    </div>
+</div>
+
+<br>
+<h2>🧠 3. The One‑Command Survival Query</h2>
+
+<p>In production environments &mdash; and haunted kiosks &mdash; you don&rsquo;t have time to run multiple checks. You need <strong>one command</strong> that correlates every signal and tells you whether to proceed.</p>
+
+<h3>The Master Diagnostic Command</h3>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin-bottom: 20px;">
+    
+    <div style="padding: 12px 20px; border-bottom: 1px solid #f3f4f6; background-color: #fef2f2; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #991b1b;">anomaly_diagnostic.sql</span>
+        <span style="font-size: 0.75rem; color: #b91c1c; text-transform: uppercase; letter-spacing: 0.05em;">Security Query</span>
+    </div>
+
+    <div style="padding: 20px; background-color: #ffffff; overflow-x: auto;">
+        <pre style="margin: 0; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.9rem; line-height: 1.5; color: #1f2937;"><span style="color: #6b7280; font-style: italic;">-- Step 6: Master Anomaly Diagnostic Query</span>
+<span style="color: #2563eb; font-weight: 600;">SELECT</span>
+    c.customer_id,
+    c.name,
+    c.appearance_notes,
+    <span style="color: #2563eb; font-weight: 600;">CASE</span>
+        <span style="color: #2563eb; font-weight: 600;">WHEN</span> b.has_pulse = <span style="color: #059669;">0</span> <span style="color: #2563eb; font-weight: 600;">THEN</span> <span style="color: #d97706;">'NO HEARTBEAT (CLASS-S)'</span>
+        <span style="color: #2563eb; font-weight: 600;">WHEN</span> l.night_vision = <span style="color: #d97706;">'Disappears'</span> <span style="color: #2563eb; font-weight: 600;">THEN</span> <span style="color: #d97706;">'VANISHING ENTITY'</span>
+        <span style="color: #2563eb; font-weight: 600;">WHEN</span> l.cam_1_front = <span style="color: #d97706;">'Two People'</span> <span style="color: #2563eb; font-weight: 600;">THEN</span> <span style="color: #d97706;">'BODY DOUBLE DETECTED'</span>
+        <span style="color: #2563eb; font-weight: 600;">WHEN</span> l.cam_2_back = <span style="color: #d97706;">'Black Holes'</span> <span style="color: #2563eb; font-weight: 600;">THEN</span> <span style="color: #d97706;">'BACK MUTATION'</span>
+        <span style="color: #2563eb; font-weight: 600;">WHEN</span> c.reported_gender = <span style="color: #d97706;">'Female'</span>
+             <span style="color: #2563eb; font-weight: 600;">AND</span> b.voice_pitch <span style="color: #2563eb; font-weight: 600;">LIKE</span> <span style="color: #d97706;">'%Deep%'</span> <span style="color: #2563eb; font-weight: 600;">THEN</span> <span style="color: #d97706;">'VOICE-GENDER MISMATCH'</span>
+        <span style="color: #2563eb; font-weight: 600;">ELSE</span> <span style="color: #d97706;">'LIKELY HUMAN'</span>
+    <span style="color: #2563eb; font-weight: 600;">END AS</span> anomaly_type
+<span style="color: #2563eb; font-weight: 600;">FROM</span> customers c
+<span style="color: #2563eb; font-weight: 600;">JOIN</span> cctv_logs l <span style="color: #2563eb; font-weight: 600;">ON</span> c.customer_id = l.customer_id
+<span style="color: #2563eb; font-weight: 600;">JOIN</span> biometrics b <span style="color: #2563eb; font-weight: 600;">ON</span> c.customer_id = b.customer_id
+<span style="color: #2563eb; font-weight: 600;">WHERE</span> l.night_vision != <span style="color: #d97706;">'Visible'</span>
+   <span style="color: #2563eb; font-weight: 600;">OR</span> l.cam_1_front != <span style="color: #d97706;">'Humanoid'</span>
+   <span style="color: #2563eb; font-weight: 600;">OR</span> l.cam_2_back != <span style="color: #d97706;">'Normal Back'</span>
+   <span style="color: #2563eb; font-weight: 600;">OR</span> b.has_pulse = <span style="color: #059669;">0</span>
+   <span style="color: #2563eb; font-weight: 600;">OR</span> (c.reported_gender = <span style="color: #d97706;">'Female'</span> <span style="color: #2563eb; font-weight: 600;">AND</span> b.voice_pitch <span style="color: #2563eb; font-weight: 600;">LIKE</span> <span style="color: #d97706;">'%Deep%'</span>);</pre>
+    </div>
+</div>
+
+<h3>Why this works</h3>
+
+<ul>
+	<li>
+	<p><strong>JOINs</strong> unify multiple perception layers.</p>
+	</li>
+	<li>
+	<p><strong>CASE</strong> maps raw anomalies into human‑readable labels.</p>
+	</li>
+	<li>
+	<p><strong>WHERE</strong> filters out normal customers, reducing cognitive load under pressure.</p>
+	</li>
+</ul>
+
+<p>This turns noisy surveillance data into a clean operational decision.</p>
+
+<br>
+<h2>🧾 4. Database State: The Raw Evidence</h2>
+
+<p>Before running diagnostics, always inspect raw tables to verify data integrity.</p>
+
+<h3>Table: <code>customers</code></h3>
+
+<pre>
+<code>SELECT * FROM customers;
+</code></pre>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+        <thead>
+            <tr style="background-color: #f8fafc;">
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">customer_id</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">name</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">reported_gender</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">appearance_notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">1</td>
+                <td style="padding: 16px 24px; color: #111827;">Karate Man</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Male</span></td>
+                <td style="padding: 16px 24px; color: #6b7280; font-style: italic;">Practicing moves, looks normal</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6; background-color: #fffaf0;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">2</td>
+                <td style="padding: 16px 24px; color: #111827;">Smiling Man</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Male</span></td>
+                <td style="padding: 16px 24px; color: #b45309; font-weight: 500;">Wide grin, staring intensely</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">3</td>
+                <td style="padding: 16px 24px; color: #111827;">Business Lady</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fce7f3; color: #9d174d; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Female</span></td>
+                <td style="padding: 16px 24px; color: #6b7280;">Looking at watch, seems impatient</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">4</td>
+                <td style="padding: 16px 24px; color: #111827;">The Twin</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fce7f3; color: #9d174d; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">Female</span></td>
+                <td style="padding: 16px 24px; color: #6b7280;">Looks like a regular student</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>Table: <code>cctv_logs</code></h3>
+
+<pre>
+<code>SELECT * FROM cctv_logs;
+</code></pre>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    
+    <div style="padding: 20px 24px; border-bottom: 1px solid #f3f4f6; background-color: #ffffff;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">System Logs: CCTV Observation Truth</h2>
+        <p style="margin: 4px 0 0; font-size: 0.875rem; color: #ef4444; font-weight: 500;">Warning: Reality discrepancies highlighted in bold</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+        <thead>
+            <tr style="background-color: #f8fafc;">
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">log_id</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">customer_id</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">cam_1_front</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">cam_2_back</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">night_vision</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">101</td>
+                <td style="padding: 16px 24px; color: #374151;">1</td>
+                <td style="padding: 16px 24px; color: #111827;">Humanoid</td>
+                <td style="padding: 16px 24px; color: #111827;">Normal Back</td>
+                <td style="padding: 16px 24px; color: #111827;">Visible</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6; background-color: #fef2f2;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">102</td>
+                <td style="padding: 16px 24px; color: #374151;">2</td>
+                <td style="padding: 16px 24px; color: #b91c1c; font-weight: 700; text-decoration: underline;">Two People</td>
+                <td style="padding: 16px 24px; color: #111827;">Normal Back</td>
+                <td style="padding: 16px 24px; color: #111827;">Visible</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6; background-color: #fef2f2;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">103</td>
+                <td style="padding: 16px 24px; color: #374151;">3</td>
+                <td style="padding: 16px 24px; color: #111827;">Humanoid</td>
+                <td style="padding: 16px 24px; color: #b91c1c; font-weight: 700; text-decoration: underline;">Black Holes</td>
+                <td style="padding: 16px 24px; color: #b91c1c; font-weight: 700; text-decoration: underline;">Disappears</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">104</td>
+                <td style="padding: 16px 24px; color: #374151;">4</td>
+                <td style="padding: 16px 24px; color: #111827;">Humanoid</td>
+                <td style="padding: 16px 24px; color: #111827;">Normal Back</td>
+                <td style="padding: 16px 24px; color: #111827;">Visible</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="padding: 12px 24px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: right;">
+        <span style="font-size: 0.75rem; color: #9ca3af;">CCTV Feed Status: LIVE DECODING</span>
+    </div>
+</div>
+
+<h3>Table: <code>biometrics</code></h3>
+
+<pre>
+<code>SELECT * FROM biometrics;
+</code></pre>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    
+    <div style="padding: 20px 24px; border-bottom: 1px solid #f3f4f6; background-color: #ffffff;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #111827;">Biometric Scans: Internal Vital Signs</h2>
+        <p style="margin: 4px 0 0; font-size: 0.875rem; color: #ef4444; font-weight: 500;">Warning: Biological signatures out of range</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+        <thead>
+            <tr style="background-color: #f8fafc;">
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">customer_id</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">voice_pitch</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #e5e7eb; color: #4b5563; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">has_pulse</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">1</td>
+                <td style="padding: 16px 24px; color: #111827;">Normal</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">1 (Active)</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">2</td>
+                <td style="padding: 16px 24px; color: #111827;">High-Pitched</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">1 (Active)</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6; background-color: #fef2f2;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">3</td>
+                <td style="padding: 16px 24px; color: #111827;">None</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">0 (NONE)</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6; background-color: #fef2f2;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">4</td>
+                <td style="padding: 16px 24px; color: #b91c1c; font-weight: 700; text-decoration: underline;">Ultra-Deep Bass</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">1 (Active)</span></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="padding: 12px 24px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: right;">
+        <span style="font-size: 0.75rem; color: #9ca3af;">Biometric Integrity: ANALYZING DISCREPANCIES</span>
+    </div>
+</div>
+
+<br>
+<h2>🚨 5. Final Diagnostic Output</h2>
+
+<p>Executing the master query produces the following actionable report:</p>
+
+<div style="width: 100%; max-width: 900px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; border: 1px solid #e5e7eb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    
+    <div style="padding: 20px 24px; border-bottom: 1px solid #f3f4f6; background-color: #ffffff;">
+        <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: #b91c1c;">Final Diagnostic: Anomaly Detection Report</h2>
+        <p style="margin: 4px 0 0; font-size: 0.875rem; color: #4b5563;">Correlated data from CCTV and Biometric sensors</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
+        <thead>
+            <tr style="background-color: #fef2f2;">
+                <th style="padding: 12px 24px; border-bottom: 2px solid #fee2e2; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">customer_id</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #fee2e2; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">name</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #fee2e2; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">appearance_notes</th>
+                <th style="padding: 12px 24px; border-bottom: 2px solid #fee2e2; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">anomaly_type</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">2</td>
+                <td style="padding: 16px 24px; color: #111827;">Smiling Man</td>
+                <td style="padding: 16px 24px; color: #6b7280;">Wide grin, staring intensely</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fecaca;">BODY DOUBLE DETECTED</span></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">3</td>
+                <td style="padding: 16px 24px; color: #111827;">Business Lady</td>
+                <td style="padding: 16px 24px; color: #6b7280;">Looking at watch, seems impatient</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fecaca;">NO HEARTBEAT (CLASS-S)</span></td>
+            </tr>
+            <tr>
+                <td style="padding: 16px 24px; color: #374151; font-weight: 500;">4</td>
+                <td style="padding: 16px 24px; color: #111827;">The Twin</td>
+                <td style="padding: 16px 24px; color: #6b7280;">Looks like a regular student</td>
+                <td style="padding: 16px 24px;"><span style="background-color: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fecaca;">VOICE-GENDER MISMATCH</span></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div style="padding: 12px 24px; background-color: #fef2f2; border-top: 1px solid #fee2e2; text-align: right;">
+        <span style="font-size: 0.75rem; color: #b91c1c; font-weight: 600;">STATUS: DO NOT SERVE</span>
+    </div>
+</div>
+
+<br>
+<h2>🧩 6. Lessons for Real‑World Developers</h2>
+
+<p>Behind the horror theme are practical database design principles:</p>
+
+<ul>
+	<li>
+	<p>Model multiple sources of truth separately.</p>
+	</li>
+	<li>
+	<p>Normalize observational data before analysis.</p>
+	</li>
+	<li>
+	<p>Use SQL logic to transform raw signals into business decisions.</p>
+	</li>
+	<li>
+	<p>Keep output concise for operational environments.</p>
+	</li>
+</ul>
+
+<p>Whether you&rsquo;re running a kiosk, a security dashboard, or a Django SaaS platform, structured queries reduce uncertainty.</p>
+
+<hr />
+<h2>🧷 Conclusion</h2>
+
+<p>Data integrity is survival.</p>
+
+<p>When <code>biometrics.has_pulse</code> doesn&rsquo;t align with <code>customers.name</code>, you&rsquo;re not just debugging &mdash; you&rsquo;re making a safety decision.</p>
+
+<p>Keep your schema clean, your joins indexed, and your CASE statements ready.</p>
+
+<p>Because sometimes&hellip; the anomaly isn&rsquo;t in the code.</p>
+
+<hr />
+<h3>🔜 Next Steps (Optional Enhancements)</h3>
+
+<p>If you want to evolve this system further, consider:</p>
+
+<ul>
+	<li>
+	<p>Creating a stored procedure: <code>CALL Check_Customer(id);</code></p>
+	</li>
+	<li>
+	<p>Building a Python script that prints <strong>SERVE</strong> or <strong>REJECT</strong> automatically</p>
+	</li>
+	<li>
+	<p>Streaming logs into a Django admin dashboard</p>
+	</li>
+	<li>
+	<p>Adding triggers for real‑time alerts</p>
+	</li>
+</ul>
+
+<p>Stay safe. Query everything.</p>
